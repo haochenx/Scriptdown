@@ -1,5 +1,18 @@
+{
+  var Invocation = function(name,payload,arg) {
+    this.name = name;
+    this.payload = payload;
+    this.arg = arg;
+  }
+
+  var Macro = function(name,payload,arg) {
+    Invocation.call(this,name,payload,arg);
+  }
+  Macro.prototype = Object.create(Invocation.prototype);
+}
+
 start
-  = text
+  = pieces
 
 alphabet = [A-Za-z]
 alphanum = alphabet / [0-9]
@@ -7,7 +20,7 @@ punct = [!-//:-@\[-`{-~]
 whitespace = [ \n\r\t]
 
 escape = "\\"
-escaped = [\[\\]
+escaped = [\\\[\]]
 unescaped
   = alphanum / (! escaped) ch:punct { return ch; }
 
@@ -15,6 +28,7 @@ char
   = unescaped
   / escape seq:(
              "[" { return "["; } /
+             "]" { return "]"; } /
              "n" { return "\n"; } /
              "t" { return "t"; }
            ) { return seq; }
@@ -25,8 +39,44 @@ whitespaces = whitespace+ { return " "; }
 
 word = chars:alphanum+ { return chars.join(""); }
 puncts = puncts:punct_char+ { return puncts.join(""); }
+text_token
+  = word / puncts / whitespaces
 text
-  = word:word words:text { return [word].concat(words); }
-  / puncts:puncts words:text { return [puncts].concat(words); }
-  / ws:whitespaces words:text { return [ws].concat(words); }
+  = first:text_token rest:text { return [first].concat(rest); }
+  / first:text_token { return [first]; }
+
+id_first_char = alphabet / [._]
+id_rest_char = id_first_char / alphanum
+
+id = first:id_first_char rest:id_rest_char* { return [first].concat(rest).join(""); }
+
+invocation
+  = macro
+  / exrend
+  / crossref
+  / compinst
+
+piece
+  = invocation
+  / text
+
+pieces
+  = first:piece rest:pieces { return [first].concat(rest); }
+  / first:piece { return [first]; }
   /
+
+invocation_arg
+  = ":" word:word { return word; }
+
+macro
+  = "[" payload:pieces "]" "(" name:id arg:invocation_arg? ")"
+    { return new Macro(name,payload,arg); }
+
+exrend
+  = "rule_undefined"
+
+crossref
+  = "rule_undefined"
+
+compinst
+  = "rule_undefined"
