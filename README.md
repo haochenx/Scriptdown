@@ -1,5 +1,4 @@
-Scriptdown
-==========
+# Scriptdown
 
 Scripdown, a manuscript authoring tool. The name is inspired by the famous Markdown,
 and the tool's job is similar to it, to convert plain text source files to formatted
@@ -67,3 +66,7 @@ In the early stage, Scriptdown is supposed to be a mix of the following projects
 - DOT (relationship graphs): [Viz.js](https://github.com/mdaines/viz.js/)
 - Gnuplot (plotted charts): [gnuplot-js](https://github.com/chhu/gnuplot-JS)
 - Emacs Org-mode like Table
+
+## License
+
+Scriptdown is supposed to be released under the Apache License, Version 2.0
