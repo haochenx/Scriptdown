@@ -1,0 +1,32 @@
+start
+  = text
+
+alphabet = [A-Za-z]
+alphanum = alphabet / [0-9]
+punct = [!-//:-@\[-`{-~]
+whitespace = [ \n\r\t]
+
+escape = "\\"
+escaped = [\[\\]
+unescaped
+  = alphanum / (! escaped) ch:punct { return ch; }
+
+char
+  = unescaped
+  / escape seq:(
+             "[" { return "["; } /
+             "n" { return "\n"; } /
+             "t" { return "t"; }
+           ) { return seq; }
+punct_char
+  = (! alphanum) char:char { return char; }
+
+whitespaces = whitespace+ { return " "; }
+
+word = chars:alphanum+ { return chars.join(""); }
+puncts = puncts:punct_char+ { return puncts.join(""); }
+text
+  = word:word words:text { return [word].concat(words); }
+  / puncts:puncts words:text { return [puncts].concat(words); }
+  / ws:whitespaces words:text { return [ws].concat(words); }
+  /
