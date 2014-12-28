@@ -15,16 +15,19 @@
   }
   ExternalRenderer.prototype = Object.create(Invocation.prototype);
 
-  var CompileInstruction = function(name,payload,arg) {
-    Invocation.call(this,name,payload,arg);
-  }
-  CompileInstruction.prototype = Object.create(Invocation.prototype);
-
   var CrossRef = function(name,payload) {
     Invocation.call(this,name,payload);
   }
   CrossRef.prototype = Object.create(Invocation.prototype);
 
+  var CompileInstruction = function(name,payload) {
+    this.name = name;
+    this.payload = payload;
+  }
+
+  var chainInvocations = function(payload,invocationChain) {
+    return {payload: payload, chain: invocationChain }
+  }
 }
 
 start
@@ -47,7 +50,7 @@ char
              "]" { return "]"; } /
              "n" { return "\n"; } /
              "r" { return "\r"; } /
-             "t" { return "t"; }
+             "t" { return "\t"; }
            ) { return seq; }
 punct_char
   = (! alphanum) char:char { return char; }
@@ -67,36 +70,48 @@ id_rest_char = id_first_char / alphanum
 
 id = first:id_first_char rest:id_rest_char* { return [first].concat(rest).join(""); }
 
-invocation
-  = macro
-  / exrend
-  / crossref
-  / compinst
+bracket_invocation
+  = payload:bracket_invocation_payload_parsed "(" first:bracket_invocation_list_parsed rest:bracket_invocation_list_rest ")"
+    { return chainInvocations(payload, [first].concat(rest)); }
+  / payload:bracket_invocation_payload_unparsed "(" first:bracket_invocation_list_unparsed rest:bracket_invocation_list_rest ")"
+    { return chainInvocations(payload, [first].concat(rest)); }
+
+bracket_invocation_payload_parsed
+  = "[" payload:pieces "]" { return payload; }
+
+bracket_invocation_payload_unparsed
+  = "[" payload:char+ "]" { return payload.join(""); }
+
+bracket_invocation_list_parsed
+  = id:macro_id arg:bracket_invocation_arg? { return { type: "Macro", id: id, arg: arg }; }
+  / id:crossref_id { return {type: "CrossRef", id: id}; }
+
+bracket_invocation_list_unparsed
+  = id:exrend_id arg:bracket_invocation_arg? { return { type: "ExternalRenderer", id: id, arg: arg }; }
+
+bracket_invocation_list_rest
+  = ";" first:bracket_invocation_list_rest_comp rest:bracket_invocation_list_rest { return [first].concat(rest); }
+  / ";" first:bracket_invocation_list_rest_comp { return [first]; }
+  /
+
+bracket_invocation_list_rest_comp
+  = id:macro_id arg:bracket_invocation_arg? { return { type: "Macro", id: id, arg: arg }; }
+  / id:exrend_id arg:bracket_invocation_arg? { return { type: "ExternalRenderer", id: id, arg: arg }; }
+  / id:crossref_id { return {type: "CrossRef", id: id}; }
+
+bracket_invocation_arg
+  = ":" arg:word { return arg; }
+
+macro_id = id
+exrend_id = "!" id:id { return id; }
+crossref_id = "@" id:id { return id; }
+compinst_id = "!!" id:id { return id; }
 
 piece
-  = invocation
-  / text
+  = text
+  / bracket_invocation
 
 pieces
   = first:piece rest:pieces { return [first].concat(rest); }
   / first:piece { return [first]; }
   /
-
-invocation_arg
-  = ":" word:word { return word; }
-
-macro
-  = "[" payload:pieces "]" "(" name:id arg:invocation_arg? ")"
-    { return new Macro(name,payload,arg); }
-
-exrend
-  = "[" payload:char* "]" "(" "!" name:id arg:invocation_arg? ")"
-    { return new ExternalRenderer(name,payload.join(""),arg); }
-
-crossref
-  = "[" payload:pieces "]" "(" "@" name:id ")"
-    { return new CrossRef(name,payload); }
-
-compinst
-  = "[" payload:char* "]" "(" "!!" name:id arg:invocation_arg? ")"
-    { return new CompileInstruction(name,payload.join(""),arg); }
