@@ -1,27 +1,27 @@
 {
-  var Invocation = function(name,payload,arg) {
-    this.name = name;
+  var Invocation = function(id,payload,arg) {
+    this.id = id;
     this.payload = payload;
     this.arg = arg;
   }
 
-  var Macro = function(name,payload,arg) {
-    Invocation.call(this,name,payload,arg);
+  var Macro = function(id,payload,arg) {
+    Invocation.call(this,id,payload,arg);
   }
   Macro.prototype = Object.create(Invocation.prototype);
 
-  var ExternalRenderer = function(name,payload,arg) {
-    Invocation.call(this,name,payload,arg);
+  var ExternalRenderer = function(id,payload,arg) {
+    Invocation.call(this,id,payload,arg);
   }
   ExternalRenderer.prototype = Object.create(Invocation.prototype);
 
-  var CrossRef = function(name,payload) {
-    Invocation.call(this,name,payload);
+  var CrossRef = function(id,payload) {
+    Invocation.call(this,id,payload);
   }
   CrossRef.prototype = Object.create(Invocation.prototype);
 
-  var CompileInstruction = function(name,payload) {
-    this.name = name;
+  var CompilerInstruction = function(id,payload) {
+    this.id = id;
     this.payload = payload;
   }
 
@@ -71,15 +71,15 @@ id_rest_char = id_first_char / alphanum
 id = first:id_first_char rest:id_rest_char* { return [first].concat(rest).join(""); }
 
 bracket_invocation
-  = payload:bracket_invocation_payload_parsed "(" first:bracket_invocation_list_parsed rest:bracket_invocation_list_rest ")"
+  = payload:bracket_payload_parsed "(" first:bracket_invocation_list_parsed rest:bracket_invocation_list_rest ")"
     { return chainInvocations(payload, [first].concat(rest)); }
-  / payload:bracket_invocation_payload_unparsed "(" first:bracket_invocation_list_unparsed rest:bracket_invocation_list_rest ")"
+  / payload:bracket_payload_unparsed "(" first:bracket_invocation_list_unparsed rest:bracket_invocation_list_rest ")"
     { return chainInvocations(payload, [first].concat(rest)); }
 
-bracket_invocation_payload_parsed
+bracket_payload_parsed
   = "[" payload:pieces "]" { return payload; }
 
-bracket_invocation_payload_unparsed
+bracket_payload_unparsed
   = "[" payload:char+ "]" { return payload.join(""); }
 
 bracket_invocation_list_parsed
@@ -102,14 +102,19 @@ bracket_invocation_list_rest_comp
 bracket_invocation_arg
   = ":" arg:word { return arg; }
 
+bracket_compinst
+  = payload:bracket_payload_unparsed "(" id:compinst_id ")"
+    { return new CompilerInstruction(id,payload); }
+
 macro_id = id
 exrend_id = "!" id:id { return id; }
 crossref_id = "@" id:id { return id; }
 compinst_id = "!!" id:id { return id; }
 
 piece
-  = text
+  = bracket_compinst
   / bracket_invocation
+  / text
 
 pieces
   = first:piece rest:pieces { return [first].concat(rest); }
