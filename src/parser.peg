@@ -9,6 +9,22 @@
     Invocation.call(this,name,payload,arg);
   }
   Macro.prototype = Object.create(Invocation.prototype);
+
+  var ExternalRenderer = function(name,payload,arg) {
+    Invocation.call(this,name,payload,arg);
+  }
+  ExternalRenderer.prototype = Object.create(Invocation.prototype);
+
+  var CompileInstruction = function(name,payload,arg) {
+    Invocation.call(this,name,payload,arg);
+  }
+  CompileInstruction.prototype = Object.create(Invocation.prototype);
+
+  var CrossRef = function(name,payload) {
+    Invocation.call(this,name,payload);
+  }
+  CrossRef.prototype = Object.create(Invocation.prototype);
+
 }
 
 start
@@ -22,7 +38,7 @@ whitespace = [ \n\r\t]
 escape = "\\"
 escaped = [\\\[\]]
 unescaped
-  = alphanum / (! escaped) ch:punct { return ch; }
+  = alphanum / " " / (! escaped) ch:punct { return ch; }
 
 char
   = unescaped
@@ -30,6 +46,7 @@ char
              "[" { return "["; } /
              "]" { return "]"; } /
              "n" { return "\n"; } /
+             "r" { return "\r"; } /
              "t" { return "t"; }
            ) { return seq; }
 punct_char
@@ -73,10 +90,13 @@ macro
     { return new Macro(name,payload,arg); }
 
 exrend
-  = "rule_undefined"
+  = "[" payload:char* "]" "(" "!" name:id arg:invocation_arg? ")"
+    { return new ExternalRenderer(name,payload.join(""),arg); }
 
 crossref
-  = "rule_undefined"
+  = "[" payload:pieces "]" "(" "@" name:id ")"
+    { return new CrossRef(name,payload); }
 
 compinst
-  = "rule_undefined"
+  = "[" payload:char* "]" "(" "!!" name:id arg:invocation_arg? ")"
+    { return new CompileInstruction(name,payload.join(""),arg); }
