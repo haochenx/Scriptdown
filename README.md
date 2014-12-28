@@ -2,6 +2,8 @@
 
 Scripdown, a manuscript authoring tool.
 
+**This document is under draft status**
+
 ## Introduction
 
 The name is inspired by the famous Markdown,
@@ -85,6 +87,7 @@ Compositions:
     + Macro
     + External Renderer
     + Cross Reference
+- Compiler Instructions
 
 #### Text
 
@@ -256,6 +259,91 @@ names are useful. Here's an example:
 ```
 [Section 1](structure.section:@sec1,@sec1)
 ```
+
+#### Compiler Instruction
+
+Texts and invocations will only affect how the output looks like, the logical
+contents in other words. If you need to change the behavior of the compiler,
+e.g. you want to use a plugin that's not in the core modules, or define a new
+syntax sugar, you have to use compiler instructions.
+
+Compiler instruction(CI) is a special type of invocation, and a compiler instruction
+will not considered as an invocation at the runtime. Compiler instructions' name
+starts with two exclamation mark (`!!`), taking no argument, and perform the
+modification suggested by its name to the compiler. CI's can take payload, and
+can appear anywhere in the source file, but the compiler will execute all
+CI's before processing other texts or invocations wherever the CI's are. Plugins
+can also contribute CI's.
+
+##### Compiler Instruction -- `!!use`:
+
+<code>\[*package*.*plugin_name*\](!!use)</code>
+
+Invoke `!!use` compiler instruction to import and use a plugin. The
+*plugin_name* can be an asterisk, which serves as a wildcards that will import
+and use all plugins in the specific package. *package* cannot contain wildcard
+though. Example:
+
+`[scriptx.dot.*](!!use)`
+
+Note that all plugins in `script.core` package and its sub-packages is imported
+and used by default.
+
+# Core modules
+
+The core modules define plugins under the parent package `script.core`. Here's
+a list of sub-packages and plugins planed to be added to the core modules:
+
+- script.core
+  + InlinedExternalSourceSugar
+
+- script.core.structure
+  + Chapter{Macro,Sugar}
+  + Section{Macro,Sugar}
+  + LeveledSection{Macro,Sugar}
+
+- script.core.style
+  + FontSizeMacro
+  + FontColorMacro
+  + FontFamilyMacro
+  + FontStyle{Macro,Sugar}
+
+- script.core.list
+  + OrderedList{Macro,Sugar}
+  + UnorderedList{Macro,Sugar}
+
+- script.core.quote
+  + Blockquote{Macro,Sugar}
+
+- script.core.table
+- script.core.math
+  + LaTeXMath{Macro,Sugar}
+
+- script.core.codec
+  + Base64Renderer
+  + Base64EncodingDefinition
+
+- script.core.url
+  + Url{Rendered,Sugar}
+  + HttpUrlRendered
+
+- script.core.image
+  + ImageRenderer
+  + PngImageRenderer
+  + JpgImageRenderer
+
+# Standard extension modules
+
+The standard extension modules define plugins under the parent package
+`scriptx`. Here's a list of sub-packages planed to be added to the standard
+extension modules:
+
+- scriptx.code
+- scriptx.dot
+- scriptx.toc
+- scriptx.datasheet
+- scriptx.plot
+- scriptx.bib
 
 ## License
 
