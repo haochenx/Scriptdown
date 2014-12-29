@@ -45,10 +45,60 @@
     }
     return result; //{payload: payload, chain: invocationChain }
   }
+
+  var renderTexts = function(texts) {
+    return "<p>" + texts.join("") + "</p>";
+  }
+
+  var macroRegistry = {};
+
+  (function() {
+     var output = document.getElementById('output');
+     var newOutput = document.createElement('div');
+     var outputParent = output.parentNode;
+     newOutput.id='output';
+     outputParent.removeChild(output);
+     outputParent.appendChild(newOutput);
+     macroRegistry["color"] = function(payload,arg) { return '<span style="color:'+ arg + '">'+ payload + '</span>' }
+   })();
+
+  var handleMacro = function(macro) {
+    var payload = renderPieces(macro.payload);
+    return macroRegistry[macro.id](payload,macro.arg);
+  }
+
+  var renderPieces = function(pieces) {
+    var result = [];
+    pieces.forEach(function(elem) {
+    if (elem.scriptdownType == "text")
+      result.push(renderTexts(elem));
+    if (elem instanceof Macro)
+      result.push(handleMacro(elem));
+    });
+    return result.join("");
+  }
+
+  var frameHTML = function(body) {
+    return body;
+  };
+
+  var render = function(pieces) {
+    var result = frameHTML(renderPieces(pieces));
+    showResult(result);
+    return result;
+  }
+
+  var showResult = function(html) {
+    window.setTimeout(function() {
+      var output = document.getElementById("output");
+      output.innerHTML = html;
+    }, 0);
+  }
 }
 
 start
-  = pieces
+  = pieces:pieces
+    { return render(pieces) }
 
 piece
   = bracket_compinst
@@ -84,7 +134,7 @@ char
              "t" { return "\t"; }
            ) { return seq; }
 punct_char
-  = (! alphanum) char:char { return char; }
+  = (! alphanum ! whitespace) char:char { return char; }
 
 whitespaces = whitespace+ { return " "; }
 nonbr_whitespaces = nonbr_whitespace+ { return " "; }
@@ -93,9 +143,12 @@ word = chars:alphanum+ { return chars.join(""); }
 puncts = puncts:punct_char+ { return puncts.join(""); }
 text_token
   = word / puncts / whitespaces
-text
-  = first:text_token rest:text { return [first].concat(rest); }
+_text
+  = first:text_token rest:_text { return [first].concat(rest); }
   / first:text_token { return [first]; }
+
+text
+  = text:_text { text.scriptdownType="text"; return text; }
 
 id_first_char = alphabet / [._]
 id_rest_char = id_first_char / alphanum
