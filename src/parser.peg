@@ -33,6 +33,18 @@
 start
   = pieces
 
+piece
+  = bracket_compinst
+  / bracket_invocation
+  / tag_invocation
+  / tag_compinst
+  / text
+
+pieces
+  = first:piece rest:pieces { return [first].concat(rest); }
+  / first:piece { return [first]; }
+  /
+
 alphabet = [A-Za-z]
 alphanum = alphabet / [0-9]
 punct = [!-//:-@\[-`{-~]
@@ -72,6 +84,11 @@ id_first_char = alphabet / [._]
 id_rest_char = id_first_char / alphanum
 
 id = first:id_first_char rest:id_rest_char* { return [first].concat(rest).join(""); }
+
+macro_id = id
+exrend_id = "!" id:id { return id; }
+crossref_id = "@" id:id { return id; }
+compinst_id = "!!" id:id { return id; }
 
 bracket_invocation
   = payload:bracket_payload_parsed "(" first:bracket_invocation_list_parsed rest:bracket_invocation_list_rest ")"
@@ -148,20 +165,3 @@ tag_compinst
   = "<" oid:compinst_id ">" payload:tag_payload_unparsed "<" "/" cid:compinst_id ">"
     & { return oid == cid; }
     { return new CompilerInstruction(oid,payload); }
-
-macro_id = id
-exrend_id = "!" id:id { return id; }
-crossref_id = "@" id:id { return id; }
-compinst_id = "!!" id:id { return id; }
-
-piece
-  = bracket_compinst
-  / bracket_invocation
-  / tag_invocation
-  / tag_compinst
-  / text
-
-pieces
-  = first:piece rest:pieces { return [first].concat(rest); }
-  / first:piece { return [first]; }
-  /
