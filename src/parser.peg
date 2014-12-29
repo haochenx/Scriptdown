@@ -25,8 +25,25 @@
     this.payload = payload;
   }
 
+  var createInvocationObject = function(type,id,payload,arg) {
+    switch(type) {
+    case "Macro":
+      return new Macro(id,payload,arg);
+    case "ExternalRenderer":
+      return new ExternalRenderer(id,payload,arg);
+    case "CrossRef":
+      return new CrossRef(id,payload);
+    }
+  }
+
   var chainInvocations = function(payload,invocationChain) {
-    return {payload: payload, chain: invocationChain }
+    var first = invocationChain[0];
+    var result = createInvocationObject(first.type, first.id, payload, first.arg);
+    for (var i=1; i < invocationChain.length; ++i) {
+      var curr = invocationChain[i];
+      result = createInvocationObject(curr.type, curr.id, result, curr.arg);
+    }
+    return result; //{payload: payload, chain: invocationChain }
   }
 }
 
