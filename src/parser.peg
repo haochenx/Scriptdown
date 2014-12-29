@@ -2,7 +2,7 @@
   var Invocation = function(id,payload,arg) {
     this.id = id;
     this.payload = payload;
-    this.arg = arg;
+    if (arg) this.arg = arg;
   }
 
   var Macro = function(id,payload,arg) {
@@ -37,9 +37,10 @@ alphabet = [A-Za-z]
 alphanum = alphabet / [0-9]
 punct = [!-//:-@\[-`{-~]
 whitespace = [ \n\r\t]
+nonbr_whitespace = [ \t]
 
 escape = "\\"
-escaped = [\\\[\]]
+escaped = [\\\[\]<]
 unescaped
   = alphanum / " " / (! escaped) ch:punct { return ch; }
 
@@ -48,6 +49,7 @@ char
   / escape seq:(
              "[" { return "["; } /
              "]" { return "]"; } /
+             "<" { return "<"; } /
              "n" { return "\n"; } /
              "r" { return "\r"; } /
              "t" { return "\t"; }
@@ -56,6 +58,7 @@ punct_char
   = (! alphanum) char:char { return char; }
 
 whitespaces = whitespace+ { return " "; }
+nonbr_whitespaces = nonbr_whitespace+ { return " "; }
 
 word = chars:alphanum+ { return chars.join(""); }
 puncts = puncts:punct_char+ { return puncts.join(""); }
@@ -106,6 +109,46 @@ bracket_compinst
   = payload:bracket_payload_unparsed "(" id:compinst_id ")"
     { return new CompilerInstruction(id,payload); }
 
+tag_invocation
+  = "<" otag:tag_invocation_tag_parsed ">" payload:tag_payload_parsed "<" "/" ctag:tag_invocation_close_tag ">"
+    & { return ctag.type == otag.type && ctag.id == otag.id }
+    { return otag.constructor(payload); }
+  / "<" otag:tag_invocation_tag_unparsed ">" payload:tag_payload_unparsed "<" "/" ctag:tag_invocation_close_tag ">"
+    & { return ctag.type == otag.type && ctag.id == otag.id }
+    { return otag.constructor(payload); }
+
+tag_payload_parsed
+  = payload:pieces { return payload; }
+
+tag_payload_unparsed
+  = payload:(char / whitespace)* { return payload.join(""); }
+
+tag_invocation_tag_parsed
+  = id:macro_id arg:tag_invocation_arg?
+    { return { type: "Macro", id: id, arg: arg,
+               constructor: function (payload) { return new Macro(id,payload,arg)} }; }
+  / id:crossref_id 
+    { return {type: "CrossRef", id: id,
+               constructor: function (payload) { return new CrossRef(id,payload)} }; }
+
+tag_invocation_tag_unparsed
+  = id:exrend_id arg:tag_invocation_arg?
+    { return { type: "ExternalRenderer", id: id, arg: arg,
+               constructor: function (payload) { return new ExternalRenderer(id,payload,arg)} }; }
+
+tag_invocation_close_tag
+  = id:macro_id { return { type: "Macro", id: id }; }
+  / id:crossref_id { return {type: "CrossRef", id: id}; }
+  / id:exrend_id { return { type: "ExternalRenderer", id: id }; }
+
+tag_invocation_arg
+  = nonbr_whitespaces arg:word { return arg; }
+
+tag_compinst
+  = "<" oid:compinst_id ">" payload:tag_payload_unparsed "<" "/" cid:compinst_id ">"
+    & { return oid == cid; }
+    { return new CompilerInstruction(oid,payload); }
+
 macro_id = id
 exrend_id = "!" id:id { return id; }
 crossref_id = "@" id:id { return id; }
@@ -114,6 +157,8 @@ compinst_id = "!!" id:id { return id; }
 piece
   = bracket_compinst
   / bracket_invocation
+  / tag_invocation
+  / tag_compinst
   / text
 
 pieces
